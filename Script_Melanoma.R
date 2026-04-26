@@ -25,8 +25,6 @@ library(SingleR)
 library(Azimuth)
 library(SeuratData)
 library(ggplot2)
-
-
 #######################################
 #1. Load data and Create Seurat Object
 ######################################
@@ -39,7 +37,6 @@ sc.data  =  CreateSeuratObject(counts = sc.data, assay = "RNA")
 #Load annotations and merge with seurat object
 annotations  = read.table("annotations.csv",sep = "\t",header = TRUE,row.names =1, check.names =FALSE)
 sc.data = AddMetaData(object = sc.data,metadata = annotations)
-
 
 ################################################
 #2.Quality Control
@@ -67,7 +64,6 @@ sc.data <- subset(sc.data,subset = nFeature_RNA >1000 & nFeature_RNA<10000)
 #3. Normalize using SCT Transform
 #################################################################
 sc.data <- SCTransform(sc.data,verbose = TRUE)
-
 
 ########################################################
 #4. Find Variable Features
@@ -103,7 +99,6 @@ dev.off()
 
 dims_to_use <- 1:25
 
-
 ################################################################
 #6.Clustering 
 ##################################################################
@@ -129,13 +124,11 @@ DimPlot(sc.data, reduction = "umap", pt.size = 0.8, label = TRUE)+
   labs(title = "Unintegrated UMAP Projection of Melanoma Single-Cell Transcriptomes")
 dev.off()
 
-
 emf("Sample_ID vs Cluster.emf", width = 7, height = 7)
 p1 = DimPlot(sc.data, reduction="umap", group.by = "Sample_ID",label = TRUE, label.size = 3)
 p2 = DimPlot(sc.data, reduction="umap", group.by = "seurat_clusters",label = TRUE, label.size = 3)
 p1 + p2
 dev.off()
-
 
 ################################################################################
 #Viewing the composition of each cluster against the sample before Integration 
@@ -157,12 +150,9 @@ ggplot(metadata, aes(x = seurat_clusters, fill = Sample_ID)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
 dev.off()
 
-
-
 ################################################################################
 #Integrated Clustering with Harmony
 ################################################################################
-
 # Harmony. Integrate by sample only.
 sc.data = RunHarmony(sc.data, 
                      assay.use = "SCT", 
@@ -182,8 +172,6 @@ p1 = DimPlot(sc.data, group.by = "Sample_ID", reduction="umap_integrated", label
 p2 = DimPlot(sc.data, group.by = "seurat_clusters", reduction="umap_integrated", label = TRUE, label.size = 3) 
 p1 + p2
 dev.off()
-
-
 ################################################################################
 #Viewing the composition of each cluster against the sample after Integration 
 ################################################################################
@@ -200,7 +188,6 @@ ggplot(metadata, aes(x = seurat_clusters, fill = Sample_ID)) +
   scale_y_continuous(labels = scales::percent) +
   theme(axis.text.x = element_text(angle = 45, vjust = 0.5))
 dev.off()
-
 
 ################################################################################
 #Cluster Marker Genes - What genes make each cell cluster unique?
@@ -220,7 +207,6 @@ DoHeatmap(sc.data, features = topn_markers$gene,size = 3) +
   labs(title = "Top 5 Cluster Markers Heatmap of Melanoma Single-Cell Transcriptomes")+
   theme(axis.text.y = element_text(size = 5))
 dev.off()  
-
 
 ################################################################################
 #Run AZIMUTH
@@ -253,7 +239,6 @@ dev.off()
 emf("Percentage_melanoma_percluster.emf", width = 7, height = 7)
 DotPlot(sc.data, features = c("SOX10", "MLANA", "PMEL", "PTPRC", "COL1A1")) + RotatedAxis()
 dev.off()
-
 ################################################################################
 #Updating Cluster names
 ################################################################################
@@ -283,8 +268,6 @@ p1 = DimPlot(sc.data, group.by = "cell.types" , reduction = "umap_integrated", l
 p2 = DimPlot(sc.data, group.by = "seurat_clusters", reduction ="umap_integrated",label = TRUE, repel = TRUE, label.size = 3) + NoLegend()
 p1 + p2
 dev.off()
-
-
 ################################################################################
 #doublets
 ################################################################################
@@ -294,7 +277,6 @@ dbl.dens = computeDoubletDensity(sc.data@assays$SCT@data)
 sc.data$DoubletScore = dbl.dens
 # plot to view possible doublet clusters
 FeaturePlot(sc.data, "DoubletScore", reduction = "umap_integrated") 
-
 
 ################################################################################
 #View by mutation status, disease extent and sample site
@@ -306,7 +288,6 @@ a3 = DimPlot(sc.data, group.by = "Sample_site", reduction = "umap_integrated", p
 a1+a2+a3
 a1
 dev.off()
-
 
 #########################################################################################
 ## Identify differentially expressed genes between NRAS Q61L and BRAF V600E melanoma cells
@@ -328,7 +309,6 @@ EnhancedVolcano(de.nras_vs_braf,
                 pCutoff = 0.05,
                 FCcutoff = 1.0)+theme_classic()
 dev.off()
-
 
 ################################################################################
 #HeatMap of the significant genes 
@@ -411,14 +391,12 @@ DoHeatmap(tumor, features = top5_tumor.markers$gene,size = 3) +
   theme(axis.text.y = element_text(size = 5))
 dev.off()  
 
-
 ###################################################################################################################
 #Melanoma is known to have 4 stages of differentiation, with evident gene markers is this evident in our clusters?
 ##################################################################################################################
 emf("tumor_clusters_differentiation_states.emf", width = 7, height = 7)
 FeaturePlot(tumor, features = c("MLANA", "PMEL", "MITF", "AXL", "NGFR", "MKI67","SOX10","SOX9","SMAD3","CTNNB1","EGFR","ERBB3"), ncol = 3) & NoAxes()
 dev.off()
-
 
 ################################################################################
 #Define a gene list for each differentiation state
@@ -428,7 +406,6 @@ differentiation_states <- list(
   Neural_Crest     = c("NGFR", "SOX10", "SMAD3"),
   Transitory       = c("MITF", "SOX10", "ERBB3"),
   Melanocytic      = c("MITF", "CTNNB1", "TYR", "MLANA"))
-
 
 ####################################
 #Calculate the scores for every cell
@@ -469,7 +446,6 @@ DimPlot(tumor, group.by = "differentiation_state", reduction = "tumor_umap_integ
   ggtitle("Melanoma Differentiation States")
 dev.off()
 
-
 #############################################################################
 #What is the association between Mutation Status and differentiation state?
 ###############################################################################
@@ -479,7 +455,6 @@ VlnPlot(tumor,
         group.by = "Mutational_status", 
         pt.size = 0) # to have a cleaner plot
 dev.off()
-
 
 ################################################################################
 #How do differentiated vs Undifferentiated cells communicate?
@@ -501,7 +476,6 @@ cellchat_DB <- CellChatDB.human
 #add secreted signalling db to our cellchat_DB
 cellchat_data@DB <- cellchat_DB
 
-
 #create the 'data.signaling' matrix 
 cellchat_data <- subsetData(cellchat_data) 
 
@@ -517,11 +491,9 @@ cellchat_data = filterCommunication(cellchat_data, min.cells = 10)
 cellchat_data = computeCommunProbPathway(cellchat_data)
 interactions = subsetCommunication(cellchat_data)
 
-
 #Process the results into a network
 cellchat_data = aggregateNet(cellchat_data)
 cellchat_data = netAnalysis_computeCentrality(cellchat_data , slot.name = "netP")
-
 
 ################################################################################
 #Exploring the Global Interactions 
@@ -567,7 +539,6 @@ netAnalysis_contribution(cellchat_data, signaling = pathways.show)
 dev.off()
 
 plotGeneExpression(cellchat_data, signaling = pathways.show, enriched.only = TRUE, type = "violin")
-
 
 pairLR = extractEnrichedLR(cellchat_data, signaling = pathways.show, geneLR.return = FALSE)
 pairLR
