@@ -65,7 +65,6 @@ make_pc1_pc2 = function(colour_groups, e_data)
     theme_bw()
   return(ggp)
 }
-
 #______________Save plot function_______________________________________________
 save_emf = function(plot_obj, file_name, h = 7, w = 7) 
   {
@@ -76,8 +75,6 @@ save_emf = function(plot_obj, file_name, h = 7, w = 7)
   dev.off()
   message("Saved: ", path)
 }
-
-
 #____________Heatmap function___________________________________________________ 
 make_heatmap = function(e_data, candidate_genes)
   
@@ -90,8 +87,6 @@ make_heatmap = function(e_data, candidate_genes)
   # parses
   em_scaled_candidates = na.omit(data.frame(t(scale(t(e_data[candidate_genes,])))))
   hm.matrix = as.matrix(em_scaled_candidates)
-  
-  
   # does the y clustering
   y.dist = Dist(hm.matrix, method="spearman")
   y.cluster = hclust(y.dist, method="average")
@@ -117,7 +112,6 @@ make_heatmap = function(e_data, candidate_genes)
   # return plot
   return(ggp)
 }
-
 #______Single Gene Box Plot_____________________________________________________
 single_boxplot = function(e_data, gene, g_data)
 {
@@ -136,15 +130,11 @@ single_boxplot = function(e_data, gene, g_data)
   
   return(ggp)
 }
-
-
 #__________________Multi-gene box plot function__________________________________ 
 multi_boxplot = function(e_data,candidate_genes,g_data)
 {
   library(reshape2)
   library(ggplot2)
-  
-  
   # create the table
   gene_data = na.omit(data.frame(t(scale(t(e_data[candidate_genes,])))))
   gene_data = data.frame(t(gene_data))
@@ -236,7 +226,7 @@ do_pathway = function(organism_db, genes, e_data, g_data, id_type)
     
     # skip if fewer than 2 genes
     if (length(candidate_genes) < 2) next
-    
+   
     # make the plots
     ggp.heatmap = make_heatmap(e_data, candidate_genes)
     ggp.boxplot = multi_boxplot(e_data, candidate_genes, g_data)
@@ -250,12 +240,9 @@ do_pathway = function(organism_db, genes, e_data, g_data, id_type)
   }
   return(pathway_results)
 }
-
-
 #______________Metagene Function________________________________________________
 make_metagene = function(scaled_e_data,signature_genes,signature_edata,g_data)
-{
-  
+{  
   signature_em = scaled_e_data[signature_genes,]
   signature_metagene = data.frame(colMeans(signature_edata))
   names(signature_metagene) = "meta_expression"
@@ -265,10 +252,7 @@ make_metagene = function(scaled_e_data,signature_genes,signature_edata,g_data)
   
   return(ggp)
 }
-
-
 #__________Plot Signature function______________________________________________
-
 plot_signature = function() 
 { 
 ggp = make_heatmap(e_data, candidate_genes) 
@@ -277,10 +261,7 @@ ggp2 = make_metagene(scaled_e_data,signature_genes,signature_edata,g_data)
 results = list(list("tables" = list(),"plots"= list())) 
 return(results) 
 } 
-
-
 #________Chromosome plot function_____________________
-
 make_chr_plot = function(sig_data, title)
 {
   # count how many significant genes are on each chromosome
