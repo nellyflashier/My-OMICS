@@ -1,0 +1,177 @@
+################################################################################
+#Glioblastoma data analysis 
+################################################################################
+#Set working directory and load table
+setwd("C:/Users/nelly/Desktop/R/OMICS/glioblastoma/data")
+ss <- read.table("SS.csv",header = TRUE,sep = "\t")
+sss <- read.table("ss_per_patient.csv",header = TRUE,sep = "\t")
+
+###############################################################
+#PART 1: CLINICAL AND TECHNICAL CHARACTERISTICS TABLE
+################################################################
+
+#Add a new column with better sample group names for more clarity
+library(dplyr)
+ss <- ss %>%
+  mutate(group = case_when(
+    sample_group == "GB_1" ~ "Metastatic",
+    sample_group == "GB_2" ~ "Non-metastatic",
+    sample_group == "HC" ~ "Healthy_controls"
+  ))
+
+#Create Table
+library(gtsummary)
+summary_table = tbl_summary(ss,
+                            by = group,
+                            include = c(age,bmi,days_survived,censored,batch,slide_area),
+                            statistic = list(all_continuous() ~ "{mean} ({sd})", all_categorical() ~ "{n} / {N} ({p}%)"))
+summary_table
+
+#Using the add_p() function to add a p value column to the table:
+summary_table_with_p = add_p(summary_table)
+summary_table_with_p
+
+#Save table 
+summary_table_p_gt = as_gt(summary_table_with_p)
+summary_table_p_gt
+
+library(gt)
+gtsave(summary_table_p_gt, "clinical_table.html")
+
+###############################################################################
+#PART 2: NORMALIZE COUNT DATA USING DESeq2 AND ASSSESING DATA FURTHER 
+###############################################################################
+
+#load counts file
+counts = read.table("counts.csv",header=TRUE,row.names = 1,sep='\t')
+
+#Load library
+library(DESeq2)
+
+#remove rows with a mean of =>1 read
+counts = subset(counts, apply(counts, 1, mean) >= 1)
+
+#Prepare DESeq2 input data 
+#Convert DF into a matrix
+counts = as.matrix(counts)
+
+#sample_group column a factor
+ss$group = factor(ss$group)
+
+#Run DESeq2
+dds = DESeqDataSetFromMatrix(countData = counts,colData = ss, design = ~group)
+dds = DESeq(dds)
+
+#Extract normalized counts  and truncate to 2dp
+em = as.data.frame(counts(dds, normalized=TRUE))
+em = round(em,2)
+
+#Saves the em table to working directory 
+em_out = cbind(row.names(em), em)
+names(em_out)[1] = "ID"
+write.table(em_out, file="EM.csv",row.names=FALSE, sep="\t", quote = FALSE)
+
+##############################
+#Plot Saving function
+#############################
+save_plot =function(plot,plot.path,plot.height,plot.width)
+{
+  png(plot.path,width = plot.width,height =plot.height)
+  print(plot)
+  dev.off()
+}
+##########################################################
+#Convert continuous variables to discrete for PCA plotting
+###########################################################
+age_discrete = cut(ss$age,2, labels = c("low","high"));ss$age_d = age_discrete
+bmi_discrete = cut(ss$bmi,2, labels = c("low","high"));ss$bmi_d = bmi_discrete
+survived_discrete = cut(ss$days_survived,2, labels = c("low","high"));ss$survive_d = survived_discrete
+area_discrete = cut(ss$slide_area,2, labels = c("low","high"));ss$area_d = area_discrete
+
+####################################################
+#Plotting PCAs
+####################################################
+#PCA 1,2 Function 
+library("ggplot2")
+make_pc1_pc2 = function(colour_groups, e_data)
+{
+  # scale data
+  e_data_scaled = na.omit(data.frame(t(scale(t(e_data)))))
+  # run PCA
+  xx = prcomp(t(e_data_scaled))
+  pca_coordinates = data.frame(xx$x)
+  
+  # get % variation
+  vars = apply(xx$x, 2, var)
+  prop_x = round(vars["PC1"] / sum(vars),4) * 100
+  prop_y = round(vars["PC2"] / sum(vars),4) * 100
+  x_axis_label = paste("PC1 (" ,prop_x, "%)", sep="")
+  y_axis_label = paste("PC2 (" ,prop_y, "%)", sep="")
+  # plot 
+  ggp = ggplot(pca_coordinates, aes(x=PC1, y= PC2, colour = colour_groups)) +
+    geom_point(size = 3) +
+    labs(title = "PCA", x= x_axis_label, y= y_axis_label) +
+    theme_classic()
+  return(ggp)
+}
+
+#############
+#Make Plots 
+############
+a <- make_pc1_pc2(ss$age_d,em)+labs(title = "Age")
+b <- make_pc1_pc2(ss$bmi_d,em)+labs(title = "BMI")
+c <- make_pc1_pc2(ss$survive_d,em)+labs(title = "Days Survived")
+d <- make_pc1_pc2(ss$batch,em)+labs(title = "Batch")
+e <- make_pc1_pc2(ss$area_d,em)+labs(title = "Slide Area")
+
+################
+#Save Plots
+###############
+library(patchwork)
+pca1_2 = wrap_plots(a, b, c, d, e, ncol = 3)
+pca1_2
+save_plot(pca1_2,"C:/Users/nelly/Desktop/OMICS/glioblastoma/pca1_2.png",966,1152)
+
+###############
+#PC 3,4
+##############
+make_pc3_pc4 = function(colour_groups, e_data)
+{
+  # scale data
+  e_data_scaled = na.omit(data.frame(t(scale(t(e_data)))))
+  # run PCA
+  xx = prcomp(t(e_data_scaled))
+  pca_coordinates = data.frame(xx$x)
+  
+  # get % variation
+  vars = apply(xx$x, 2, var)
+  prop_x = round(vars["PC3"] / sum(vars),4) * 100
+  prop_y = round(vars["PC4"] / sum(vars),4) * 100
+  x_axis_label = paste("PC3 (" ,prop_x, "%)", sep="")
+  y_axis_label = paste("PC4 (" ,prop_y, "%)", sep="")
+  # plot 
+  ggp = ggplot(pca_coordinates, aes(x=PC3, y= PC4, colour = colour_groups)) +
+    geom_point(size = 3) +
+    labs(title = "PCA", x= x_axis_label, y= y_axis_label) +
+    theme_classic()
+  return(ggp)
+}
+
+#################
+#Make Plots 
+#################
+f <- make_pc3_pc4(ss$age_d,em)+labs(title = "Age")
+g <- make_pc3_pc4(ss$bmi_d,em)+labs(title = "BMI")
+h <- make_pc3_pc4(ss$survive_d,em)+labs(title = "Days Survived")
+i <- make_pc3_pc4(ss$batch,em)+labs(title = "Batch")
+j <- make_pc3_pc4(ss$area_d,em)+labs(title = "Slide Area")
+
+
+#############
+#Save Plots
+#############
+pca3_4 = wrap_plots(f, g, h, i, j, ncol = 3)
+pca3_4
+save_plot(pca3_4,"C:/Users/nelly/Desktop/OMICS/glioblastoma/pca3_4.png",966,1152)
+
+
